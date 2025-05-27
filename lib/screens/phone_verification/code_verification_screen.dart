@@ -39,6 +39,13 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
     _shakeAnimation = Tween(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
     );
+
+    // Auto-fill the hardcoded verification code after a delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _fillTestCode();
+      }
+    });
   }
 
   @override
@@ -134,6 +141,13 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
+
+        // Auto-fill again after resend
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            _fillTestCode();
+          }
+        });
       }
     }
   }
@@ -226,7 +240,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text('Test code filled! You can now verify.'),
+              Text('Verification code auto-filled!'),
             ],
           ),
           backgroundColor: Colors.green,
@@ -275,7 +289,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                       children: [
                         const TextSpan(text: 'Enter the 6-digit code sent to '),
                         TextSpan(
-                          text: authService.phoneNumber ?? 'your phone',
+                          text: authService.phoneNumber ?? '+91 7718059613',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -283,55 +297,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                   ),
                   const SizedBox(height: 32),
 
-                  // PIN code input field with animation
-                  AnimatedBuilder(
-                    animation: _shakeAnimation,
-                    builder: (context, child) {
-                      final sineValue = sin(4 * 2 * pi * _shakeAnimation.value);
-                      return Transform.translate(
-                        offset: Offset(sineValue * 6, 0),
-                        child: PinCodeTextField(
-                          appContext: context,
-                          length: 6,
-                          controller: _codeController,
-                          obscureText: false,
-                          animationType: AnimationType.fade,
-                          pinTheme: PinTheme(
-                            shape: PinCodeFieldShape.box,
-                            borderRadius: BorderRadius.circular(12),
-                            fieldHeight: 56,
-                            fieldWidth: 48,
-                            activeFillColor: Colors.white,
-                            inactiveFillColor: Colors.grey[100],
-                            selectedFillColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                            activeColor: Theme.of(context).primaryColor,
-                            inactiveColor: Colors.grey[300],
-                            selectedColor: Theme.of(context).primaryColor,
-                            disabledColor: Colors.grey[200],
-                          ),
-                          animationDuration: const Duration(milliseconds: 300),
-                          enableActiveFill: true,
-                          keyboardType: TextInputType.number,
-                          enabled: !_isVerifying,
-                          onCompleted: (value) {
-                            if (mounted) {
-                              setState(() => _isCodeComplete = true);
-                              _verifyCode();
-                            }
-                          },
-                          onChanged: (value) {
-                            if (mounted) {
-                              setState(() => _isCodeComplete = value.length == 6);
-                            }
-                          },
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Test code helper - PROMINENT
+                  // Test code helper - PROMINENT and Auto-filled
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -353,7 +319,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                                 color: Colors.green[600],
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.security, color: Colors.white, size: 16),
+                              child: const Icon(Icons.verified, color: Colors.white, size: 16),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -361,7 +327,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Test Verification Code',
+                                    'Verification Code Auto-Filled',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Colors.green[800],
@@ -370,7 +336,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Use this code for the test number',
+                                    'Ready to verify your phone number',
                                     style: TextStyle(
                                       color: Colors.green[700],
                                       fontSize: 13,
@@ -415,26 +381,56 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                             ],
                           ),
                         ),
-
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _fillTestCode,
-                            icon: const Icon(Icons.content_paste, size: 18),
-                            label: const Text('Fill Test Code'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green[600],
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // PIN code input field with animation
+                  AnimatedBuilder(
+                    animation: _shakeAnimation,
+                    builder: (context, child) {
+                      final sineValue = sin(4 * 2 * pi * _shakeAnimation.value);
+                      return Transform.translate(
+                        offset: Offset(sineValue * 6, 0),
+                        child: PinCodeTextField(
+                          appContext: context,
+                          length: 6,
+                          controller: _codeController,
+                          obscureText: false,
+                          animationType: AnimationType.fade,
+                          pinTheme: PinTheme(
+                            shape: PinCodeFieldShape.box,
+                            borderRadius: BorderRadius.circular(12),
+                            fieldHeight: 56,
+                            fieldWidth: 48,
+                            activeFillColor: Colors.green[50],
+                            inactiveFillColor: Colors.grey[100],
+                            selectedFillColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                            activeColor: Colors.green[600],
+                            inactiveColor: Colors.grey[300],
+                            selectedColor: Theme.of(context).primaryColor,
+                            disabledColor: Colors.grey[200],
+                          ),
+                          animationDuration: const Duration(milliseconds: 300),
+                          enableActiveFill: true,
+                          keyboardType: TextInputType.number,
+                          enabled: !_isVerifying,
+                          onCompleted: (value) {
+                            if (mounted) {
+                              setState(() => _isCodeComplete = true);
+                              _verifyCode();
+                            }
+                          },
+                          onChanged: (value) {
+                            if (mounted) {
+                              setState(() => _isCodeComplete = value.length == 6);
+                            }
+                          },
+                        ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 24),
@@ -483,7 +479,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                           ),
                         const SizedBox(height: 12),
                         Text(
-                          AppConstants.autoDetectCode,
+                          'Code auto-filled for demo purposes',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.grey[500],
                           ),
@@ -529,36 +525,20 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                             style: TextStyle(color: Colors.red[600]),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    authService.resetError();
-                                    _codeController.clear();
-                                    setState(() => _isCodeComplete = false);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red[600],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                  ),
-                                  child: const Text('Try Again'),
-                                ),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                authService.resetError();
+                                _fillTestCode();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green[600],
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 8),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: _fillTestCode,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[600],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                  ),
-                                  child: const Text('Use Test Code'),
-                                ),
-                              ),
-                            ],
+                              child: const Text('Use Test Code'),
+                            ),
                           ),
                         ],
                       ),

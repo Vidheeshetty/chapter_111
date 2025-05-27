@@ -11,9 +11,6 @@ import 'services/storage_service.dart';
 import 'utils/app_logger.dart';
 import 'firebase_options.dart';
 
-// Import debug helper - comment out if you haven't created it yet
-import 'debug/auth_debug_helper.dart';
-
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +45,7 @@ void main() async {
   );
 
   try {
-    print('🚀 === Initializing Chapter 11 App ===');
+    print('🚀 === Initializing Chapter 11 App (Simplified Auth) ===');
 
     // Initialize Firebase with detailed logging
     print('🔥 Initializing Firebase...');
@@ -56,17 +53,6 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialized successfully');
-
-    // Validate setup in debug mode
-    if (kDebugMode) {
-      try {
-        AuthDebugHelper.validateSetup();
-        print('🔍 Debug mode enabled - comprehensive logging active');
-      } catch (e) {
-        print('⚠️  Debug helper not available: $e');
-        print('💡 Create lib/debug/auth_debug_helper.dart to enable detailed debugging');
-      }
-    }
 
     // Initialize storage service
     print('💾 Initializing Storage Service...');
@@ -80,8 +66,8 @@ void main() async {
     await networkService.initialize();
     print('✅ Network Service initialized - Connected: ${networkService.isConnected}');
 
-    // Initialize auth service with detailed logging
-    print('🔐 Initializing Auth Service...');
+    // Initialize simplified auth service
+    print('🔐 Initializing Simplified Auth Service...');
     final authService = AuthService();
     await authService.initialize();
     print('✅ Auth Service initialized');
@@ -89,15 +75,16 @@ void main() async {
     if (kDebugMode) {
       print('📊 Auth Status: ${authService.isAuthenticated ? 'Authenticated' : 'Not Authenticated'}');
       if (authService.isAuthenticated) {
-        print('👤 Current user: ${authService.currentUser?.uid}');
+        print('👤 Current user: ${authService.currentUser?.uid ?? 'Phone User'}');
         print('📧 Email: ${authService.currentUser?.email ?? 'N/A'}');
-        print('📞 Phone: ${authService.currentUser?.phoneNumber ?? 'N/A'}');
+        print('📞 Phone: ${authService.phoneNumber ?? 'N/A'}');
         print('🔄 Auth method: ${authService.lastMethod ?? 'Unknown'}');
       }
+      print('🎯 Hardcoded values: Phone=7718059613, Code=123456');
     }
 
     print('🎉 All services initialized successfully!');
-    print('🚀 Starting Chapter 11 App...\n');
+    print('🚀 Starting Chapter 11 App with Simplified Authentication...\n');
 
     // Run the app with providers
     runApp(
@@ -130,15 +117,6 @@ void main() async {
       AppLogger.e('Critical app initialization error', e, stackTrace);
     } catch (loggerError) {
       print('⚠️  Logger also failed: $loggerError');
-    }
-
-    // Try to log with debug helper if available
-    if (kDebugMode) {
-      try {
-        AuthDebugHelper.logError('CRITICAL_INITIALIZATION', e, stackTrace);
-      } catch (debugError) {
-        print('⚠️  Debug helper not available: $debugError');
-      }
     }
 
     print('❌ === END CRITICAL ERROR ===\n');
@@ -320,53 +298,12 @@ class _ErrorScreen extends StatelessWidget {
                               const SizedBox(height: 12),
 
                               // Error details
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey[300]!),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Error:',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                        color: Colors.grey[800],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      error,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontFamily: 'monospace',
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Stack Trace (first 5 lines):',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 12,
-                                        color: Colors.grey[800],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      stackTrace!.split('\n').take(5).join('\n'),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontFamily: 'monospace',
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
+                              Text(
+                                error,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                  color: Colors.red,
                                 ),
                               ),
                             ],
@@ -397,42 +334,6 @@ class _ErrorScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Help button
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        // In a real app, you might want to open a help page or email
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Contact Support'),
-                            content: const Text(
-                              'For technical support, please restart the app first. '
-                                  'If the problem persists, contact our support team.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('OK'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.help_outline),
-                      label: const Text('Get Help'),
-                      style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

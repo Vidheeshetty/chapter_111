@@ -26,30 +26,29 @@ class AuthService extends ChangeNotifier {
   GoogleSignInAccount? _googleAccount;
   User? _currentUser;
 
-  // Verification code
-  String? _verificationId;
-  int? _resendToken;
+  // Hardcoded values
+  static const String HARDCODED_PHONE = "7718059613";
+  static const String HARDCODED_CODE = "123456";
 
   // Getters
   AuthState get authState => _authState;
   String? get errorMessage => _errorMessage;
-  bool get isAuthenticated => _authState == AuthState.authenticated && _currentUser != null;
+  bool get isAuthenticated => _authState == AuthState.authenticated;
   bool get isLoading => _authState == AuthState.loading;
   AuthMethod? get lastMethod => _lastMethod;
   String? get phoneNumber => _phoneNumber;
   bool get isPhoneVerified => _isPhoneVerified;
   GoogleSignInAccount? get googleAccount => _googleAccount;
   User? get currentUser => _currentUser;
-  String? get verificationId => _verificationId;
 
   Future<void> initialize() async {
     _authState = AuthState.initial;
 
     try {
-      // Listen to auth state changes
+      // Listen to auth state changes for Google Sign-In only
       _firebaseAuth.authStateChanges().listen(_onAuthStateChanged);
 
-      // Check current user
+      // Check current user (Google only)
       _currentUser = _firebaseAuth.currentUser;
 
       if (_currentUser != null) {
@@ -72,10 +71,10 @@ class AuthService extends ChangeNotifier {
     print('Auth state changed: ${user?.uid}');
     _currentUser = user;
 
-    if (user != null) {
+    if (user != null && _lastMethod == AuthMethod.google) {
       _authState = AuthState.authenticated;
       await _saveAuthMethod();
-    } else {
+    } else if (user == null && _lastMethod == AuthMethod.google) {
       _authState = AuthState.unauthenticated;
       _lastMethod = null;
       _phoneNumber = null;
@@ -121,17 +120,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<void> _clearGoogleSignInCache() async {
-    try {
-      await _googleSignIn.signOut();
-      await _googleSignIn.disconnect();
-      print('Cleared Google Sign-In cache');
-    } catch (e) {
-      print('Error clearing Google cache: $e');
-    }
-  }
-
-  // Enhanced Google Sign In with proper UI flow
+  // Simplified Google Sign In - Direct to success
   Future<bool> signInWithGoogle() async {
     print('=== Starting Google Sign-In ===');
 
@@ -140,10 +129,11 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _clearGoogleSignInCache();
+      // Clear any previous sign-in
+      await _googleSignIn.signOut();
       await Future.delayed(const Duration(milliseconds: 500));
 
-      print('Initiating Google Sign-In flow with account picker...');
+      print('Initiating Google Sign-In flow...');
 
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
@@ -201,9 +191,9 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Proper Phone verification with Firebase
+  // Hardcoded Phone verification - No Firebase involved
   Future<bool> verifyPhoneNumber(String phoneNumber) async {
-    print('=== Starting Phone Verification ===');
+    print('=== Starting Hardcoded Phone Verification ===');
     print('Phone number: $phoneNumber');
 
     _authState = AuthState.loading;
@@ -212,119 +202,62 @@ class AuthService extends ChangeNotifier {
     _phoneNumber = phoneNumber;
     notifyListeners();
 
-    try {
-      await _firebaseAuth.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
-        timeout: const Duration(seconds: 60),
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          try {
-            print('✅ Auto verification completed');
-            final UserCredential userCredential = await _firebaseAuth.signInWithCredential(credential);
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 2));
 
-            if (userCredential.user != null) {
-              _lastMethod = AuthMethod.phone;
-              _isPhoneVerified = true;
-              _authState = AuthState.authenticated;
-              _currentUser = userCredential.user;
-              await _saveAuthMethod();
-              notifyListeners();
-            }
-          } catch (e) {
-            print('❌ Auto-verification failed: $e');
-            _errorMessage = 'Auto-verification failed.';
-            _authState = AuthState.error;
-            notifyListeners();
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          print('❌ Phone verification failed: ${e.code} - ${e.message}');
-          _authState = AuthState.error;
-          _errorMessage = _getFirebaseAuthErrorMessage(e);
-          notifyListeners();
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          print('✅ SMS code sent successfully');
-          _verificationId = verificationId;
-          _resendToken = resendToken;
-          _authState = AuthState.unauthenticated;
-          _errorMessage = null;
-          notifyListeners();
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          print('Code auto-retrieval timeout');
-          _verificationId = verificationId;
-        },
-      );
+    // Check if phone number matches hardcoded value
+    String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
 
+    if (cleanPhone.endsWith(HARDCODED_PHONE)) {
+      print('✅ Hardcoded phone number accepted');
+      _authState = AuthState.unauthenticated; // Ready for code verification
+      _errorMessage = null;
+      notifyListeners();
       return true;
-    } catch (e) {
-      print('❌ Phone verification error: $e');
+    } else {
+      print('❌ Phone number not accepted');
       _authState = AuthState.error;
-      _errorMessage = 'Phone verification failed. Please try again.';
+      _errorMessage = 'Please use the test number: +91 $HARDCODED_PHONE';
       notifyListeners();
       return false;
     }
   }
 
-  // Proper SMS code verification with Firebase
+  // Hardcoded SMS code verification - No Firebase involved
   Future<bool> verifySmsCode(String smsCode) async {
-    print('=== Verifying SMS Code ===');
+    print('=== Verifying Hardcoded SMS Code ===');
     print('Code: $smsCode');
-
-    if (_verificationId == null) {
-      print('❌ No verification ID available');
-      _authState = AuthState.error;
-      _errorMessage = 'Verification session expired. Please request a new code.';
-      notifyListeners();
-      return false;
-    }
 
     _authState = AuthState.loading;
     _errorMessage = null;
     notifyListeners();
 
-    try {
-      // Create PhoneAuthCredential with verification ID and SMS code
-      final PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId!,
-        smsCode: smsCode,
-      );
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
 
-      // Sign in with the credential
-      final UserCredential userCredential = await _firebaseAuth.signInWithCredential(credential);
+    if (smsCode == HARDCODED_CODE) {
+      print('✅ Hardcoded verification code accepted');
 
-      if (userCredential.user != null) {
-        print('✅ Phone verification successful');
-        print('User ID: ${userCredential.user!.uid}');
-        print('Phone: ${userCredential.user!.phoneNumber}');
+      _isPhoneVerified = true;
+      _lastMethod = AuthMethod.phone;
+      _authState = AuthState.authenticated;
 
-        _isPhoneVerified = true;
-        _lastMethod = AuthMethod.phone;
-        _authState = AuthState.authenticated;
-        _currentUser = userCredential.user;
+      // Create a mock user for phone auth
+      await _saveAuthMethod();
 
-        await _saveAuthMethod();
-        notifyListeners();
-        return true;
-      } else {
-        throw Exception('Firebase authentication returned null user');
-      }
-    } on FirebaseAuthException catch (e) {
-      print('❌ SMS verification error: ${e.code} - ${e.message}');
-      _authState = AuthState.error;
-      _errorMessage = _getFirebaseAuthErrorMessage(e);
+      print('✅ Phone verification successful (hardcoded mode)');
       notifyListeners();
-      return false;
-    } catch (e) {
-      print('❌ SMS verification error: $e');
+      return true;
+    } else {
+      print('❌ Invalid code. Expected: $HARDCODED_CODE');
       _authState = AuthState.error;
-      _errorMessage = 'Invalid verification code. Please try again.';
+      _errorMessage = 'Invalid code. Use $HARDCODED_CODE for testing.';
       notifyListeners();
       return false;
     }
   }
 
-  // Resend verification code
+  // Resend verification code (hardcoded)
   Future<bool> resendVerificationCode() async {
     if (_phoneNumber == null) {
       _errorMessage = 'No phone number available for resend.';
@@ -332,7 +265,7 @@ class AuthService extends ChangeNotifier {
       return false;
     }
 
-    print('=== Resending Verification Code ===');
+    print('=== Resending Hardcoded Verification Code ===');
     return await verifyPhoneNumber(_phoneNumber!);
   }
 
@@ -343,17 +276,11 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Sign out from Firebase
-      await _firebaseAuth.signOut();
-
-      // Sign out from Google if needed
-      if (_lastMethod == AuthMethod.google || _googleAccount != null) {
-        try {
-          await _googleSignIn.signOut();
-          await _googleSignIn.disconnect();
-        } catch (e) {
-          print('Google sign out error: $e');
-        }
+      // Sign out from Firebase (Google only)
+      if (_lastMethod == AuthMethod.google) {
+        await _firebaseAuth.signOut();
+        await _googleSignIn.signOut();
+        await _googleSignIn.disconnect();
       }
 
       // Clear saved auth state
@@ -367,8 +294,6 @@ class AuthService extends ChangeNotifier {
       _isPhoneVerified = false;
       _googleAccount = null;
       _currentUser = null;
-      _verificationId = null;
-      _resendToken = null;
       _errorMessage = null;
 
       print('✅ Sign out successful');
@@ -393,14 +318,6 @@ class AuthService extends ChangeNotifier {
   // Helper method to get user-friendly error messages
   String _getFirebaseAuthErrorMessage(FirebaseAuthException e) {
     switch (e.code) {
-      case 'invalid-phone-number':
-        return 'The phone number format is invalid.';
-      case 'invalid-verification-code':
-        return 'The verification code is invalid.';
-      case 'invalid-verification-id':
-        return 'The verification ID is invalid.';
-      case 'quota-exceeded':
-        return 'SMS quota exceeded. Please try again later.';
       case 'network-request-failed':
         return 'Network error. Please check your connection.';
       case 'too-many-requests':
@@ -413,93 +330,27 @@ class AuthService extends ChangeNotifier {
         return 'This sign-in method is not enabled.';
       case 'user-disabled':
         return 'This account has been disabled.';
-      case 'user-not-found':
-        return 'No account found with this phone number.';
-      case 'wrong-password':
-        return 'Incorrect password.';
-      case 'email-already-in-use':
-        return 'An account already exists with this email.';
-      case 'weak-password':
-        return 'Password is too weak.';
-      case 'requires-recent-login':
-        return 'Please sign in again to continue.';
       default:
         return e.message ?? 'An authentication error occurred.';
     }
   }
 
-  // Delete user account
-  Future<bool> deleteAccount() async {
-    if (_currentUser == null) {
-      _errorMessage = 'No user logged in.';
-      notifyListeners();
-      return false;
-    }
-
-    _authState = AuthState.loading;
-    notifyListeners();
-
-    try {
-      await _currentUser!.delete();
-      await signOut();
-      return true;
-    } on FirebaseAuthException catch (e) {
-      _authState = AuthState.error;
-      _errorMessage = _getFirebaseAuthErrorMessage(e);
-      notifyListeners();
-      return false;
-    } catch (e) {
-      _authState = AuthState.error;
-      _errorMessage = 'Failed to delete account. Please try again.';
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // Update phone number
-  Future<bool> updatePhoneNumber(String newPhoneNumber) async {
-    if (_currentUser == null) {
-      _errorMessage = 'No user logged in.';
-      notifyListeners();
-      return false;
-    }
-
-    // This would require re-verification process
-    return await verifyPhoneNumber(newPhoneNumber);
-  }
-
   // Get user display name
   String? getUserDisplayName() {
-    if (_currentUser == null) return null;
-
-    if (_currentUser!.displayName != null && _currentUser!.displayName!.isNotEmpty) {
-      return _currentUser!.displayName;
-    }
-
-    if (_currentUser!.email != null && _currentUser!.email!.isNotEmpty) {
-      return _currentUser!.email;
-    }
-
-    if (_currentUser!.phoneNumber != null && _currentUser!.phoneNumber!.isNotEmpty) {
-      return _currentUser!.phoneNumber;
+    if (_lastMethod == AuthMethod.google && _currentUser != null) {
+      if (_currentUser!.displayName != null && _currentUser!.displayName!.isNotEmpty) {
+        return _currentUser!.displayName;
+      }
+      if (_currentUser!.email != null && _currentUser!.email!.isNotEmpty) {
+        return _currentUser!.email!.split('@')[0];
+      }
+    } else if (_lastMethod == AuthMethod.phone && _phoneNumber != null) {
+      return 'Phone User';
     }
 
     return 'User';
   }
 
-  // Check if user email is verified
+  // Check if user email is verified (Google only)
   bool get isEmailVerified => _currentUser?.emailVerified ?? false;
-
-  // Send email verification
-  Future<bool> sendEmailVerification() async {
-    if (_currentUser == null) return false;
-
-    try {
-      await _currentUser!.sendEmailVerification();
-      return true;
-    } catch (e) {
-      print('Error sending email verification: $e');
-      return false;
-    }
-  }
 }

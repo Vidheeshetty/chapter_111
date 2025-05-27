@@ -8,121 +8,6 @@ import '../widgets/app_logo.dart';
 import '../widgets/custom_button.dart';
 import '../app.dart'; // Import for AppNavigator
 
-// Google Sign-In Confirmation Dialog
-class GoogleSignInConfirmationDialog extends StatelessWidget {
-  final String userEmail;
-  final String userName;
-  final VoidCallback onConfirm;
-  final VoidCallback onCancel;
-
-  const GoogleSignInConfirmationDialog({
-    Key? key,
-    required this.userEmail,
-    required this.userName,
-    required this.onConfirm,
-    required this.onCancel,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Google logo
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Center(
-                child: Text(
-                  'G',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Title
-            Text(
-              'Sign in with Google',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // User info
-            Text(
-              userName.isNotEmpty ? userName : 'Google User',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              userEmail,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Message
-            Text(
-              'Continue signing in to Chapter with this Google account?',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-
-            // Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: onCancel,
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: onConfirm,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Continue'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
 
@@ -162,95 +47,46 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       _showNetworkError = false;
     });
 
-    // Show loading dialog using AppNavigator
-    AppNavigator.showModalDialog(
-      barrierDismissible: false,
-      child: const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Opening Google Sign-In...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
     try {
       // Clear any previous errors
       authService.resetError();
 
       print('🚀 Starting Google Sign-In from UI');
 
-      // Attempt Google Sign-In - this should show Google's UI
+      // Attempt Google Sign-In - simplified, no confirmation dialog
       final success = await authService.signInWithGoogle();
 
-      // Close loading dialog
       if (mounted) {
-        AppNavigator.pop(); // Close the loading dialog
         setState(() => _isGoogleLoading = false);
 
         if (success) {
-          print('✅ Google Sign-In successful, showing confirmation dialog');
+          print('✅ Google Sign-In successful, navigating to success');
 
-          // Get user details for confirmation
-          final user = authService.currentUser;
-          final googleAccount = authService.googleAccount;
-
-          // Show confirmation dialog using AppNavigator
-          AppNavigator.showModalDialog(
-            barrierDismissible: false,
-            child: GoogleSignInConfirmationDialog(
-              userEmail: user?.email ?? googleAccount?.email ?? 'Unknown',
-              userName: user?.displayName ?? googleAccount?.displayName ?? '',
-              onConfirm: () {
-                AppNavigator.pop(); // Close confirmation dialog
-
-                // Show brief success message
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text('Successfully signed in with Google!'),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-
-                // Navigate to success screen with animation
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  AppNavigator.navigateToAuthSuccess(animated: true);
-                });
-              },
-              onCancel: () async {
-                AppNavigator.pop(); // Close confirmation dialog
-
-                // Sign out the user since they cancelled
-                await authService.signOut();
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sign-in cancelled.'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
+          // Show brief success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Successfully signed in with Google!'),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
             ),
           );
+
+          // Navigate directly to success screen
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              AppNavigator.navigateToAuthSuccess(animated: true);
+            }
+          });
         } else {
-          print('❌ Google Sign-In cancelled or failed');
-          // Don't show error for user cancellation
+          print('❌ Google Sign-In failed');
+
           if (authService.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -271,7 +107,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     } catch (e) {
       print('❌ Google Sign-In exception: $e');
       if (mounted) {
-        AppNavigator.pop(); // Close loading dialog
         setState(() => _isGoogleLoading = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -402,7 +237,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     ),
                   ),
 
-                  // Footer with log in and sign up info
+                  // Footer with test info
                   _buildFooter(),
                 ],
               ),
@@ -571,7 +406,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ],
           ),
 
-          // Simplified dev info
+          // Test credentials info
           if (MediaQuery.of(context).size.height > 600) ...[
             const SizedBox(height: 16),
             Container(
@@ -589,7 +424,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
                       const SizedBox(width: 8),
                       Text(
-                        'Test Mode',
+                        'Test Credentials',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.blue[700],
@@ -600,7 +435,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Phone: +91 7718556613 | Code: 123456',
+                    'Phone: 7718059613 | Code: 123456',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontSize: 11,
