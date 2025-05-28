@@ -26,7 +26,7 @@ class AuthService extends ChangeNotifier {
   GoogleSignInAccount? _googleAccount;
   User? _currentUser;
 
-  // Hardcoded values
+  // Hardcoded values - ONLY THESE ARE HARDCODED
   static const String HARDCODED_PHONE = "7718059613";
   static const String HARDCODED_CODE = "123456";
 
@@ -120,7 +120,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Simplified Google Sign In - Direct to success
+  // Google Sign In - Keep Firebase implementation
   Future<bool> signInWithGoogle() async {
     print('=== Starting Google Sign-In ===');
 
@@ -191,7 +191,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Hardcoded Phone verification - No Firebase involved
+  // HARDCODED Phone verification - No Firebase involved
   Future<bool> verifyPhoneNumber(String phoneNumber) async {
     print('=== Starting Hardcoded Phone Verification ===');
     print('Phone number: $phoneNumber');
@@ -203,12 +203,12 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
-    // Check if phone number matches hardcoded value
-    String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
-
-    if (cleanPhone.endsWith(HARDCODED_PHONE)) {
+    // Check if phone number contains hardcoded value - be very lenient
+    if (phoneNumber.contains(HARDCODED_PHONE) ||
+        phoneNumber.contains("91 $HARDCODED_PHONE") ||
+        phoneNumber.endsWith(HARDCODED_PHONE)) {
       print('✅ Hardcoded phone number accepted');
       _authState = AuthState.unauthenticated; // Ready for code verification
       _errorMessage = null;
@@ -217,13 +217,13 @@ class AuthService extends ChangeNotifier {
     } else {
       print('❌ Phone number not accepted');
       _authState = AuthState.error;
-      _errorMessage = 'Please use the test number: +91 $HARDCODED_PHONE';
+      _errorMessage = 'Please use the test number: $HARDCODED_PHONE';
       notifyListeners();
       return false;
     }
   }
 
-  // Hardcoded SMS code verification - No Firebase involved
+  // HARDCODED SMS code verification - No Firebase involved
   Future<bool> verifySmsCode(String smsCode) async {
     print('=== Verifying Hardcoded SMS Code ===');
     print('Code: $smsCode');
@@ -242,7 +242,7 @@ class AuthService extends ChangeNotifier {
       _lastMethod = AuthMethod.phone;
       _authState = AuthState.authenticated;
 
-      // Create a mock user for phone auth
+      // Save auth method for phone
       await _saveAuthMethod();
 
       print('✅ Phone verification successful (hardcoded mode)');

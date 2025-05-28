@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:provider/provider.dart';
@@ -15,30 +14,18 @@ class CodeVerificationScreen extends StatefulWidget {
   State<CodeVerificationScreen> createState() => _CodeVerificationScreenState();
 }
 
-class _CodeVerificationScreenState extends State<CodeVerificationScreen>
-    with TickerProviderStateMixin {
+class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
   final TextEditingController _codeController = TextEditingController();
   bool _isCodeComplete = false;
   int _resendSeconds = 60;
   Timer? _resendTimer;
   bool _canResend = false;
   bool _isVerifying = false;
-  late AnimationController _shakeController;
-  late Animation<double> _shakeAnimation;
 
   @override
   void initState() {
     super.initState();
     _startResendTimer();
-
-    // Initialize shake animation for error feedback
-    _shakeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _shakeAnimation = Tween(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
-    );
 
     // Auto-fill the hardcoded verification code after a delay
     Future.delayed(const Duration(seconds: 2), () {
@@ -51,9 +38,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
   @override
   void dispose() {
     _resendTimer?.cancel();
-    _resendTimer = null;
     _codeController.dispose();
-    _shakeController.dispose();
     super.dispose();
   }
 
@@ -103,44 +88,10 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
         setState(() => _isCodeComplete = false);
       }
 
-      // Show loading state
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              ),
-              SizedBox(width: 12),
-              Text('Resending code...'),
-            ],
-          ),
-          backgroundColor: Colors.blue,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
       // Resend code and restart timer
       final success = await authService.verifyPhoneNumber(phoneNumber);
       if (success && mounted) {
         _startResendTimer();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('New verification code sent!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
 
         // Auto-fill again after resend
         Future.delayed(const Duration(seconds: 2), () {
@@ -165,35 +116,13 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
         setState(() => _isVerifying = false);
 
         if (success) {
-          // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('Phone verified successfully!'),
-                ],
-              ),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-            ),
+          // Navigate to success screen
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/auth_success',
+                (route) => false,
           );
-
-          // Small delay for user feedback
-          await Future.delayed(const Duration(milliseconds: 500));
-
-          if (mounted) {
-            Navigator.of(context).pushNamedAndRemoveUntil(
-              '/auth_success',
-                  (route) => false,
-            );
-          }
         } else {
-          // Shake animation for error
-          _shakeController.forward().then((_) => _shakeController.reset());
-
-          // Clear the code field
+          // Clear the code field on failure
           _codeController.clear();
           setState(() => _isCodeComplete = false);
         }
@@ -201,25 +130,6 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
     } catch (e) {
       if (mounted) {
         setState(() => _isVerifying = false);
-
-        // Shake animation for error
-        _shakeController.forward().then((_) => _shakeController.reset());
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Verification failed: $e')),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        // Clear the code field
         _codeController.clear();
         setState(() => _isCodeComplete = false);
       }
@@ -232,22 +142,6 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
         _codeController.text = '123456';
         _isCodeComplete = true;
       });
-
-      // Show confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('Verification code auto-filled!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
     }
   }
 
@@ -297,7 +191,7 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                   ),
                   const SizedBox(height: 32),
 
-                  // Test code helper - PROMINENT and Auto-filled
+                  // Test code helper
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
@@ -323,63 +217,16 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Verification Code Auto-Filled',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.green[800],
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Ready to verify your phone number',
-                                    style: TextStyle(
-                                      color: Colors.green[700],
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                'Verification Code: 123456',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[800],
+                                  fontSize: 16,
+                                ),
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green[300]!),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Verification Code:',
-                                style: TextStyle(
-                                  color: Colors.green[800],
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '1 2 3 4 5 6',
-                                style: TextStyle(
-                                  color: Colors.green[900],
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 24,
-                                  letterSpacing: 8,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                            ],
-                          ),
                         ),
                       ],
                     ),
@@ -387,49 +234,40 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
 
                   const SizedBox(height: 24),
 
-                  // PIN code input field with animation
-                  AnimatedBuilder(
-                    animation: _shakeAnimation,
-                    builder: (context, child) {
-                      final sineValue = sin(4 * 2 * pi * _shakeAnimation.value);
-                      return Transform.translate(
-                        offset: Offset(sineValue * 6, 0),
-                        child: PinCodeTextField(
-                          appContext: context,
-                          length: 6,
-                          controller: _codeController,
-                          obscureText: false,
-                          animationType: AnimationType.fade,
-                          pinTheme: PinTheme(
-                            shape: PinCodeFieldShape.box,
-                            borderRadius: BorderRadius.circular(12),
-                            fieldHeight: 56,
-                            fieldWidth: 48,
-                            activeFillColor: Colors.green[50],
-                            inactiveFillColor: Colors.grey[100],
-                            selectedFillColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                            activeColor: Colors.green[600],
-                            inactiveColor: Colors.grey[300],
-                            selectedColor: Theme.of(context).primaryColor,
-                            disabledColor: Colors.grey[200],
-                          ),
-                          animationDuration: const Duration(milliseconds: 300),
-                          enableActiveFill: true,
-                          keyboardType: TextInputType.number,
-                          enabled: !_isVerifying,
-                          onCompleted: (value) {
-                            if (mounted) {
-                              setState(() => _isCodeComplete = true);
-                              _verifyCode();
-                            }
-                          },
-                          onChanged: (value) {
-                            if (mounted) {
-                              setState(() => _isCodeComplete = value.length == 6);
-                            }
-                          },
-                        ),
-                      );
+                  // PIN code input field
+                  PinCodeTextField(
+                    appContext: context,
+                    length: 6,
+                    controller: _codeController,
+                    obscureText: false,
+                    animationType: AnimationType.fade,
+                    pinTheme: PinTheme(
+                      shape: PinCodeFieldShape.box,
+                      borderRadius: BorderRadius.circular(12),
+                      fieldHeight: 56,
+                      fieldWidth: 48,
+                      activeFillColor: Colors.green[50],
+                      inactiveFillColor: Colors.grey[100],
+                      selectedFillColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                      activeColor: Colors.green[600],
+                      inactiveColor: Colors.grey[300],
+                      selectedColor: Theme.of(context).primaryColor,
+                      disabledColor: Colors.grey[200],
+                    ),
+                    animationDuration: const Duration(milliseconds: 300),
+                    enableActiveFill: true,
+                    keyboardType: TextInputType.number,
+                    enabled: !_isVerifying,
+                    onCompleted: (value) {
+                      if (mounted) {
+                        setState(() => _isCodeComplete = true);
+                        _verifyCode();
+                      }
+                    },
+                    onChanged: (value) {
+                      if (mounted) {
+                        setState(() => _isCodeComplete = value.length == 6);
+                      }
                     },
                   ),
 
@@ -477,21 +315,13 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                               ],
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Code auto-filled for demo purposes',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[500],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 24),
 
-                  // Error message if any
+                  // Show error only if there is one from auth service
                   if (authService.errorMessage != null) ...[
                     Container(
                       width: double.infinity,
@@ -510,19 +340,14 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen>
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Verification Failed',
+                                  authService.errorMessage!,
                                   style: TextStyle(
                                     color: Colors.red[600],
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            authService.errorMessage!,
-                            style: TextStyle(color: Colors.red[600]),
                           ),
                           const SizedBox(height: 12),
                           SizedBox(

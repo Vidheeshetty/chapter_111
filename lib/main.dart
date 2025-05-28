@@ -15,15 +15,11 @@ void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Handle uncaught errors in debug mode
+  // Handle uncaught errors in debug mode - SIMPLIFIED
   if (kDebugMode) {
     FlutterError.onError = (FlutterErrorDetails details) {
-      FlutterError.presentError(details);
       print('🚨 Flutter Error: ${details.exception}');
-      print('📍 Context: ${details.context}');
-      if (details.stack != null) {
-        print('📚 Stack: ${details.stack.toString().split('\n').take(5).join('\n')}');
-      }
+      // Don't use FlutterError.presentError which can cause issues
     };
   }
 
@@ -121,7 +117,7 @@ void main() async {
 
     print('❌ === END CRITICAL ERROR ===\n');
 
-    // Show comprehensive error screen
+    // Show comprehensive error screen - SIMPLIFIED
     runApp(
       MaterialApp(
         title: 'Chapter 11 - Initialization Error',
@@ -139,7 +135,7 @@ void main() async {
   }
 }
 
-/// Error screen shown when app initialization fails
+/// Error screen shown when app initialization fails - SIMPLIFIED
 class _ErrorScreen extends StatelessWidget {
   final String error;
   final String? stackTrace;
@@ -165,32 +161,23 @@ class _ErrorScreen extends StatelessWidget {
                     children: [
                       const SizedBox(height: 40),
 
-                      // Error icon with animation
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 800),
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.red[50],
-                                border: Border.all(
-                                  color: Colors.red[200]!,
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.error_outline,
-                                color: Colors.red,
-                                size: 60,
-                              ),
-                            ),
-                          );
-                        },
+                      // Error icon - REMOVED ANIMATION TO PREVENT ISSUES
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red[50],
+                          border: Border.all(
+                            color: Colors.red[200]!,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 60,
+                        ),
                       ),
 
                       const SizedBox(height: 32),
@@ -267,8 +254,8 @@ class _ErrorScreen extends StatelessWidget {
 
                       const SizedBox(height: 24),
 
-                      // Debug info in debug mode
-                      if (kDebugMode && stackTrace != null) ...[
+                      // Debug info in debug mode - SIMPLIFIED
+                      if (kDebugMode) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(16),
@@ -299,7 +286,7 @@ class _ErrorScreen extends StatelessWidget {
 
                               // Error details
                               Text(
-                                error,
+                                error.length > 200 ? '${error.substring(0, 200)}...' : error,
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontFamily: 'monospace',
